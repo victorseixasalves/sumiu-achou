@@ -211,4 +211,32 @@ class ItensTest extends TestCase
         $this->get('/')
             ->assertSee(route('itens.index'), false);
     }
+
+    public function test_estrutura_da_busca_ao_vivo_e_alternativa_sem_javascript(): void
+    {
+        $this->get(route('itens.index'))
+            ->assertSee('id="resultados"', false)
+            ->assertSee('id="resumo"', false)
+            ->assertSee('data-atualizar', false)
+            ->assertSee('name="q"', false)
+            ->assertSee('Aplicar filtros'); // botão que só aparece para quem está sem JavaScript
+    }
+
+    public function test_exibe_atalhos_de_periodo_nos_filtros(): void
+    {
+        $this->get(route('itens.index'))
+            ->assertSee('7 dias')
+            ->assertSee('30 dias')
+            ->assertSee('90 dias');
+    }
+
+    public function test_marca_os_filtros_escolhidos_ao_abrir_a_pagina(): void
+    {
+        $this->criarItem('Carteira preta', local: 'CCET');
+        $ccet = Local::where('nome', 'CCET')->firstOrFail();
+
+        $this->get(route('itens.index', ['local' => [$ccet->id]]))
+            ->assertSee('name="local[]" value="'.$ccet->id.'"', false)
+            ->assertSee('checked', false);
+    }
 }

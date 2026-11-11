@@ -24,7 +24,83 @@
 
 <x-layouts.publico titulo="Todos os itens - Sumiu&Achou">
 
-    <section class="grupo pb-16 pt-10" x-data="{ filtros: {{ $filtrosAtivos > 0 ? 'true' : 'false' }} }">
+    {{--
+        A busca e os filtros funcionam "ao vivo": enquanto a pessoa digita ou marca uma opção, a lista é atualizada
+        sem recarregar a página (fetch). Sem JavaScript, o formulário continua funcionando normalmente (botões "Buscar" e "Aplicar filtros").
+    --}}
+    <section class="grupo pb-16 pt-10"
+             x-data="{
+                 filtros: {{ $filtrosAtivos > 0 ? 'true' : 'false' }},
+                 carregando: false,
+                 termo: @js($termo),
+                 locais: @js($locaisSelecionados),
+                 categorias: @js($categoriasSelecionadas),
+                 de: @js($de ?? ''),
+                 ate: @js($ate ?? ''),
+                 temporizador: null,
+                 controle: null,
+                 get total() { return this.locais.length + this.categorias.length + (this.de ? 1 : 0) + (this.ate ? 1 : 0); },
+                 buscar(imediato = false) {
+                     clearTimeout(this.temporizador);
+                     this.temporizador = setTimeout(() => this.carregar(), imediato ? 0 : 350);
+                 },
+                 async carregar(url = null) {
+                     const formulario = this.$refs.form;
+                     const parametros = new URLSearchParams(new FormData(formulario));
+                     for (const [chave, valor] of [...parametros.entries()]) { if (valor === '') parametros.delete(chave); }
+                     const consulta = parametros.toString();
+                     const destino = url || (formulario.getAttribute('action') + (consulta ? '?' + consulta : ''));
+
+                     if (this.controle) this.controle.abort();
+                     this.controle = new AbortController();
+                     this.carregando = true;
+
+                     try {
+                         const resposta = await fetch(destino, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, signal: this.controle.signal });
+                         if (!resposta.ok) throw new Error('falha');
+                         const documento = new DOMParser().parseFromString(await resposta.text(), 'text/html');
+                         documento.querySelectorAll('[data-atualizar]').forEach((novo) => {
+                             const atual = document.getElementById(novo.id);
+                             if (atual) atual.innerHTML = novo.innerHTML;
+                         });
+                         history.replaceState(null, '', destino);
+                     } catch (erro) {
+                         if (erro.name !== 'AbortError') window.location.href = destino;
+                     } finally {
+                         this.carregando = false;
+                     }
+                 },
+                 irPagina(evento) {
+                     const link = evento.target.closest('a[href]');
+                     if (!link || !link.closest('.paginacao-itens')) return;
+                     evento.preventDefault();
+                     this.carregar(link.href).then(() => this.$refs.resultados.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+                 },
+                 periodo(dias) {
+                     const hoje = new Date();
+                     const inicio = new Date();
+                     inicio.setDate(hoje.getDate() - dias);
+                     const formatar = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                     this.de = formatar(inicio);
+                     this.ate = formatar(hoje);
+                     this.$nextTick(() => this.buscar(true));
+                 },
+                 limparBusca() {
+                     this.termo = '';
+                     this.$refs.q.focus();
+                     this.$nextTick(() => this.buscar(true));
+                 },
+                 limparTudo() {
+                     this.termo = '';
+                     this.locais = [];
+                     this.categorias = [];
+                     this.de = '';
+                     this.ate = '';
+                     this.$nextTick(() => this.buscar(true));
+                 }
+             }"
+             @keydown.window="if ($event.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes($event.target.tagName)) { $event.preventDefault(); $refs.q.focus(); }">
+
         <div class="mx-auto w-full max-w-[1240px] px-4 sm:px-6">
 
             {{-- Título --}}
@@ -34,7 +110,7 @@
                     <p class="mt-1 text-sm text-[#29166F]/70">Itens encontrados e entregues à DDI.</p>
                 </div>
 
-                <p class="rounded-full bg-white/80 px-4 py-1.5 text-sm font-semibold text-[#29166F] ring-1 ring-[#29166F]/15">
+                <p id="resumo" data-atualizar class="rounded-full bg-white/80 px-4 py-1.5 text-sm font-semibold text-[#29166F] ring-1 ring-[#29166F]/15">
                     @if ($itens->total() > 0)
                         Mostrando <strong class="font-extrabold">{{ $itens->firstItem() }}–{{ $itens->lastItem() }}</strong>
                         de <strong class="font-extrabold">{{ $itens->total() }}</strong> {{ $itens->total() === 1 ? 'item' : 'itens' }}
@@ -44,109 +120,201 @@
                 </p>
             </div>
 
-            <form method="GET" action="{{ route('itens.index') }}" class="mt-6">
+            <form x-ref="form" method="GET" action="{{ route('itens.index') }}" class="mt-6"
+                  @submit.prevent="buscar(true)"
+                  @input="buscar()"
+                  @change="if ($event.target.name !== 'q') buscar(true)">
 
-                {{-- Busca --}}
-                <div class="item-anim flex items-center gap-2 rounded-full border-2 border-[#29166F] bg-white p-1.5 pl-5 shadow-[0_6px_0_#29166F] ring-4 ring-transparent transition duration-300 focus-within:-translate-y-0.5 focus-within:shadow-[0_8px_0_#29166F] focus-within:ring-[#00988D]/25 sm:gap-3 sm:p-2 sm:pl-6" style="--i: 1;">
-                    <svg class="h-5 w-5 shrink-0 text-[#00988D]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
-                        <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
-                    </svg>
+                {{-- ============ BARRA DE BUSCA ============ --}}
+                <div class="item-anim group flex items-center gap-2 rounded-full border-2 border-[#29166F] bg-white p-1.5 shadow-[0_6px_0_#29166F] ring-4 ring-transparent transition duration-300 focus-within:-translate-y-0.5 focus-within:shadow-[0_8px_0_#29166F] focus-within:ring-[#00988D]/25 sm:gap-3 sm:p-2" style="--i: 1;">
+
+                    {{-- Ícone: vira um "carregando" enquanto busca --}}
+                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#00988D] text-white transition duration-300 group-focus-within:rotate-6 group-focus-within:scale-105 sm:h-12 sm:w-12">
+                        <svg x-show="!carregando" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true">
+                            <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+                        </svg>
+                        <svg x-show="carregando" x-cloak class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="14 44"></circle>
+                        </svg>
+                    </span>
+
                     <label for="q" class="sr-only">Buscar item</label>
-                    <input id="q" name="q" type="search" value="{{ $termo }}" autocomplete="off" placeholder="Buscar por nome, cor, marca..."
-                           class="h-11 min-w-0 flex-1 border-0 bg-transparent px-0 text-base text-[#29166F] shadow-none placeholder-[#29166F]/45 focus:border-0 focus:outline-none focus:ring-0">
-                    <button type="submit" aria-label="Buscar"
-                            class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#29166F] px-5 text-sm font-bold text-white transition duration-300 hover:bg-[#1F0F5C] active:scale-95 sm:px-7">
+                    <input id="q" name="q" type="search" x-ref="q" x-model="termo" value="{{ $termo }}" autocomplete="off" placeholder="Buscar por nome, cor, marca..."
+                           class="h-11 min-w-0 flex-1 border-0 bg-transparent px-1 text-base font-medium text-[#29166F] shadow-none placeholder-[#29166F]/40 focus:border-0 focus:outline-none focus:ring-0 sm:h-12 sm:text-lg [&::-webkit-search-cancel-button]:hidden">
+
+                    {{-- Limpar o texto --}}
+                    <button type="button" x-show="termo" x-cloak @click="limparBusca()" aria-label="Limpar a busca"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#29166F]/10 text-[#29166F] transition duration-200 hover:rotate-90 hover:bg-[#29166F] hover:text-white active:scale-90">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+                    </button>
+
+                    {{-- Dica do atalho --}}
+                    <kbd x-show="!termo" class="mr-1 hidden shrink-0 items-center justify-center rounded-lg border-2 border-[#29166F]/20 px-2.5 py-1 text-xs font-extrabold text-[#29166F]/45 sm:inline-flex" title="Aperte / para buscar">/</kbd>
+
+                    <button type="submit"
+                            class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#29166F] px-4 text-sm font-bold text-white transition duration-300 hover:bg-[#1F0F5C] active:scale-95 sm:h-12 sm:px-6">
                         <span class="hidden sm:inline">Buscar</span>
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
                     </button>
                 </div>
+
+                <p class="mt-3 hidden items-center gap-2 pl-5 text-xs font-medium text-[#29166F]/60 sm:flex">
+                    <span class="h-1.5 w-1.5 rounded-full bg-[#00988D]"></span>
+                    Os resultados aparecem enquanto você digita ou escolhe os filtros.
+                </p>
 
                 {{-- Botão para abrir os filtros no celular --}}
                 <button type="button" @click="filtros = !filtros" :aria-expanded="filtros"
                         class="mt-5 inline-flex h-11 items-center gap-2 rounded-full border-2 border-[#29166F] bg-white px-5 text-sm font-bold text-[#29166F] shadow-[0_3px_0_#29166F] transition duration-200 active:translate-y-0.5 active:shadow-none lg:hidden">
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4Z"></path></svg>
                     Filtros
-                    @if ($filtrosAtivos > 0)
-                        <span class="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#00988D] px-1.5 text-[11px] font-extrabold text-white">{{ $filtrosAtivos }}</span>
-                    @endif
+                    <span x-show="total > 0" x-cloak x-text="total" class="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#00988D] px-1.5 text-[11px] font-extrabold text-white"></span>
                 </button>
 
-                <div class="mt-6 grid gap-8 lg:grid-cols-[290px_1fr] lg:items-start">
+                <div class="mt-6 grid gap-8 lg:grid-cols-[300px_1fr] lg:items-start">
 
                     {{-- ============ FILTROS ============ --}}
-                    <aside class="item-anim rounded-3xl border-2 border-[#29166F] bg-white p-5 shadow-[6px_6px_0_#29166F] lg:sticky lg:top-24 lg:block"
+                    <aside class="item-anim overflow-hidden rounded-3xl border-2 border-[#29166F] bg-white shadow-[6px_6px_0_#29166F] lg:sticky lg:top-24 lg:block"
                            :class="filtros ? 'block' : 'hidden'" style="--i: 2;">
 
-                        <div class="flex items-center justify-between">
-                            <h2 class="flex items-center gap-2 text-lg font-extrabold">
-                                <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#00988D] text-white">
-                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4Z"></path></svg>
+                        {{-- Cabeçalho --}}
+                        <div class="flex items-center justify-between bg-[#29166F] px-5 py-4 text-white">
+                            <h2 class="flex items-center gap-3 text-lg font-extrabold">
+                                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-[#00988D]">
+                                    <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4Z"></path></svg>
                                 </span>
                                 Filtros
                             </h2>
-                            @if ($filtrosAtivos > 0)
-                                <span class="rounded-full bg-[#00988D]/15 px-2.5 py-1 text-xs font-bold text-[#00988D]">{{ $filtrosAtivos }} {{ $filtrosAtivos === 1 ? 'ativo' : 'ativos' }}</span>
-                            @endif
+                            <span x-show="total > 0" x-cloak x-transition.scale.origin.right
+                                  x-text="total + (total === 1 ? ' ativo' : ' ativos')"
+                                  class="rounded-full bg-[#00C2B3] px-3 py-1 text-xs font-extrabold text-[#29166F]"></span>
                         </div>
 
-                        {{-- Local --}}
-                        <fieldset class="mt-5">
-                            <legend class="text-[11px] font-extrabold uppercase tracking-wider text-[#29166F]/60">Local</legend>
-                            <div class="mt-2 flex flex-wrap gap-2">
-                                @foreach ($locais as $local)
-                                    <label class="cursor-pointer">
-                                        <input type="checkbox" name="local[]" value="{{ $local->id }}" class="peer sr-only" @checked(in_array($local->id, $locaisSelecionados))>
-                                        <span class="inline-flex items-center rounded-full border-2 border-[#29166F]/20 bg-white px-3 py-1.5 text-xs font-bold text-[#29166F] transition duration-200 hover:border-[#00988D] peer-checked:border-[#29166F] peer-checked:bg-[#00988D] peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#00988D]">{{ $local->nome }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </fieldset>
+                        <div class="space-y-5 p-5">
 
-                        {{-- Categoria --}}
-                        <fieldset class="mt-5">
-                            <legend class="text-[11px] font-extrabold uppercase tracking-wider text-[#29166F]/60">Categoria</legend>
-                            <div class="mt-2 flex flex-wrap gap-2">
-                                @foreach ($categorias as $categoria)
-                                    <label class="cursor-pointer">
-                                        <input type="checkbox" name="categoria[]" value="{{ $categoria->id }}" class="peer sr-only" @checked(in_array($categoria->id, $categoriasSelecionadas))>
-                                        <span class="inline-flex items-center rounded-full border-2 border-[#29166F]/20 bg-white px-3 py-1.5 text-xs font-bold text-[#29166F] transition duration-200 hover:border-[#00988D] peer-checked:border-[#29166F] peer-checked:bg-[#00988D] peer-checked:text-white peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#00988D]">{{ $categoria->nome }}</span>
-                                    </label>
-                                @endforeach
+                            {{-- Local --}}
+                            <div role="group" aria-labelledby="titulo-local">
+                                <div class="flex items-center justify-between">
+                                    <h3 id="titulo-local" class="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-[#29166F]/70">
+                                        <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-[#EDE8FB] text-[#7B69B8]">
+                                            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>
+                                        </span>
+                                        Local
+                                    </h3>
+                                    <span x-show="locais.length" x-cloak x-text="locais.length" class="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#00988D] px-1.5 text-[10px] font-extrabold text-white"></span>
+                                </div>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    @foreach ($locais as $local)
+                                        <label class="cursor-pointer">
+                                            <input type="checkbox" name="local[]" value="{{ $local->id }}" x-model="locais" class="sr-only" @checked(in_array($local->id, $locaisSelecionados))>
+                                            <span class="chip-filtro">
+                                                <svg class="marca h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>
+                                                {{ $local->nome }}
+                                            </span>
+                                        </label>
+                                    @endforeach
+                                </div>
                             </div>
-                        </fieldset>
 
-                        {{-- Data --}}
-                        <fieldset class="mt-5">
-                            <legend class="text-[11px] font-extrabold uppercase tracking-wider text-[#29166F]/60">Data em que foi achado</legend>
-                            <div class="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-1">
-                                <label class="block">
-                                    <span class="mb-1 block text-xs font-semibold text-[#29166F]/70">De</span>
-                                    <input type="date" name="de" value="{{ $de }}"
-                                           class="h-11 w-full rounded-xl border-2 border-[#29166F]/25 bg-white px-3 text-sm text-[#29166F] focus:border-[#00988D] focus:ring-0">
-                                </label>
-                                <label class="block">
-                                    <span class="mb-1 block text-xs font-semibold text-[#29166F]/70">Até</span>
-                                    <input type="date" name="ate" value="{{ $ate }}"
-                                           class="h-11 w-full rounded-xl border-2 border-[#29166F]/25 bg-white px-3 text-sm text-[#29166F] focus:border-[#00988D] focus:ring-0">
-                                </label>
+                            <div class="border-t-2 border-dashed border-[#29166F]/12"></div>
+
+                            {{-- Categoria --}}
+                            <div role="group" aria-labelledby="titulo-categoria">
+                                <div class="flex items-center justify-between">
+                                    <h3 id="titulo-categoria" class="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-[#29166F]/70">
+                                        <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-[#D6EFEB] text-[#00988D]">
+                                            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"></path><circle cx="7.5" cy="7.5" r="1.2"></circle></svg>
+                                        </span>
+                                        Categoria
+                                    </h3>
+                                    <span x-show="categorias.length" x-cloak x-text="categorias.length" class="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[#00988D] px-1.5 text-[10px] font-extrabold text-white"></span>
+                                </div>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    @foreach ($categorias as $categoria)
+                                        <label class="cursor-pointer">
+                                            <input type="checkbox" name="categoria[]" value="{{ $categoria->id }}" x-model="categorias" class="sr-only" @checked(in_array($categoria->id, $categoriasSelecionadas))>
+                                            <span class="chip-filtro">
+                                                <svg class="marca h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>
+                                                {{ $categoria->nome }}
+                                            </span>
+                                        </label>
+                                    @endforeach
+                                </div>
                             </div>
-                            @error('de') <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p> @enderror
-                            @error('ate') <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p> @enderror
-                        </fieldset>
+
+                            <div class="border-t-2 border-dashed border-[#29166F]/12"></div>
+
+                            {{-- Data --}}
+                            <div role="group" aria-labelledby="titulo-data">
+                                <div class="flex items-center justify-between">
+                                    <h3 id="titulo-data" class="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-[#29166F]/70">
+                                        <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-[#E7E1F7] text-[#7B69B8]">
+                                            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+                                        </span>
+                                        Data em que foi achado
+                                    </h3>
+                                    <button type="button" x-show="de || ate" x-cloak @click="de = ''; ate = ''; $nextTick(() => buscar(true))"
+                                            class="text-[11px] font-bold text-[#00988D] underline-offset-4 hover:underline">Limpar</button>
+                                </div>
+
+                                {{-- Atalhos de período --}}
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    @foreach ([7 => '7 dias', 30 => '30 dias', 90 => '90 dias'] as $dias => $rotuloPeriodo)
+                                        <button type="button" @click="periodo({{ $dias }})"
+                                                class="rounded-full bg-[#EDE8FB] px-3 py-1 text-[11px] font-bold text-[#29166F] transition duration-200 hover:-translate-y-0.5 hover:bg-[#29166F] hover:text-white active:scale-95">
+                                            {{ $rotuloPeriodo }}
+                                        </button>
+                                    @endforeach
+                                </div>
+
+                                <div class="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1">
+                                    <label class="block">
+                                        <span class="mb-1 block text-xs font-semibold text-[#29166F]/70">De</span>
+                                        <input type="date" name="de" x-model="de" value="{{ $de }}"
+                                               class="h-11 w-full rounded-xl border-2 border-[#29166F]/20 bg-white px-3 text-sm font-semibold text-[#29166F] transition duration-200 hover:border-[#00988D] focus:border-[#00988D] focus:ring-4 focus:ring-[#00988D]/15">
+                                    </label>
+                                    <label class="block">
+                                        <span class="mb-1 block text-xs font-semibold text-[#29166F]/70">Até</span>
+                                        <input type="date" name="ate" x-model="ate" value="{{ $ate }}"
+                                               class="h-11 w-full rounded-xl border-2 border-[#29166F]/20 bg-white px-3 text-sm font-semibold text-[#29166F] transition duration-200 hover:border-[#00988D] focus:border-[#00988D] focus:ring-4 focus:ring-[#00988D]/15">
+                                    </label>
+                                </div>
+
+                                <div id="erros-data" data-atualizar>
+                                    @error('de') <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p> @enderror
+                                    @error('ate') <p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p> @enderror
+                                </div>
+                            </div>
+                        </div>
 
                         {{-- Ações --}}
-                        <div class="mt-6">
+                        <div class="space-y-3 border-t-2 border-dashed border-[#29166F]/15 bg-[#F7F4FE] p-4">
+
+                            {{-- Só aparece para quem está sem JavaScript --}}
                             <button type="submit"
-                                    class="flex h-12 w-full items-center justify-center rounded-full bg-[#29166F] text-sm font-bold text-white shadow-[0_5px_0_#1B0E52] transition duration-200 hover:-translate-y-0.5 hover:bg-[#1F0F5C] hover:shadow-[0_7px_0_#1B0E52] active:translate-y-0.5 active:shadow-[0_1px_0_#1B0E52]">
+                                    class="so-sem-js flex h-12 w-full items-center justify-center rounded-full bg-[#29166F] text-sm font-bold text-white shadow-[0_5px_0_#1B0E52] transition duration-200 hover:-translate-y-0.5 hover:bg-[#1F0F5C] active:translate-y-0.5 active:shadow-[0_1px_0_#1B0E52]">
                                 Aplicar filtros
                             </button>
-                            <a href="{{ route('itens.index') }}"
-                               class="mt-3 block text-center text-sm font-semibold text-[#29166F]/70 underline-offset-4 transition hover:text-[#00988D] hover:underline">Limpar filtros</a>
+
+                            {{-- No celular: fecha o painel e mostra os resultados --}}
+                            <button type="button" @click="filtros = false; $refs.resultados.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                                    class="flex h-12 w-full items-center justify-center rounded-full bg-[#29166F] text-sm font-bold text-white shadow-[0_5px_0_#1B0E52] transition duration-200 active:translate-y-0.5 active:shadow-[0_1px_0_#1B0E52] lg:hidden">
+                                Ver resultados
+                            </button>
+
+                            <a href="{{ route('itens.index') }}" @click.prevent="limparTudo()"
+                               :class="(total > 0 || termo) ? '' : 'pointer-events-none opacity-40'"
+                               class="group flex h-11 items-center justify-center gap-2 rounded-full border-2 border-[#29166F]/25 bg-white text-sm font-bold text-[#29166F] transition duration-200 hover:border-[#29166F] hover:bg-[#29166F] hover:text-white active:scale-[0.98]">
+                                <svg class="h-4 w-4 transition duration-300 group-hover:-rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"></path></svg>
+                                Limpar filtros
+                            </a>
                         </div>
                     </aside>
 
                     {{-- ============ RESULTADOS ============ --}}
-                    <div class="min-w-0">
+                    <div id="resultados" data-atualizar x-ref="resultados" @click="irPagina($event)"
+                         :class="carregando ? 'pointer-events-none opacity-50' : ''"
+                         class="min-w-0 scroll-mt-28 transition-opacity duration-200">
 
                         {{-- Filtros ativos (cada um pode ser removido com o "x") --}}
                         @if ($temFiltro)

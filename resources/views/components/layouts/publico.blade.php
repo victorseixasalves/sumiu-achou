@@ -125,6 +125,28 @@
         /* A trilha tem 4 cópias da sequência e anda exatamente uma cópia (25%), então nunca fica vazio nem "pula" */
         @keyframes deslizar { from { transform: translateX(0); } to { transform: translateX(-25%); } }
 
+        /* ---------- Lista de itens: chips de filtro com seleção animada ---------- */
+        .chip-filtro {
+            position: relative; display: inline-flex; align-items: center; border: 2px solid rgba(41, 22, 111, .2); border-radius: 9999px;
+            padding: .42rem .85rem; font-size: .75rem; font-weight: 700; line-height: 1.2; color: #29166F; background: #fff; user-select: none;
+            transition: background-color .25s ease, color .25s ease, border-color .25s ease, box-shadow .25s ease, transform .3s cubic-bezier(.3, 1.6, .5, 1);
+        }
+        .chip-filtro .marca { width: 0; opacity: 0; margin-right: 0; transform: scale(.3) rotate(-40deg); flex-shrink: 0;
+                              transition: width .25s ease, margin .25s ease, opacity .2s ease, transform .35s cubic-bezier(.3, 1.6, .5, 1); }
+        .chip-filtro:hover { border-color: #00988D; transform: translateY(-1px); }
+        input:active + .chip-filtro { transform: scale(.93); }
+        input:checked + .chip-filtro { background: #00988D; color: #fff; border-color: #29166F; box-shadow: 0 3px 0 #29166F; transform: translateY(-2px);
+                                       animation: chip-pop .38s cubic-bezier(.3, 1.6, .5, 1); }
+        input:checked + .chip-filtro .marca { width: .9rem; opacity: 1; margin-right: .4rem; transform: none; }
+        input:checked + .chip-filtro::after { content: ""; position: absolute; inset: -3px; border-radius: inherit; border: 2px solid #00988D; opacity: 0; pointer-events: none;
+                                              animation: chip-onda .55s ease-out; }
+        input:focus-visible + .chip-filtro { outline: 2px solid #00988D; outline-offset: 3px; }
+        @keyframes chip-pop  { 0% { transform: scale(.88); } 55% { transform: translateY(-3px) scale(1.09); } 100% { transform: translateY(-2px) scale(1); } }
+        @keyframes chip-onda { 0% { opacity: .8; transform: scale(1); } 100% { opacity: 0; transform: scale(1.4); } }
+
+        /* Elementos que só fazem sentido quando o JavaScript NÃO está ativo (ex.: botão "Aplicar filtros") */
+        .js .so-sem-js { display: none !important; }
+
         /* ---------- Carrossel: sempre mostra um número inteiro de cards ---------- */
         .carrossel { --n: 1; --gap: 1.5rem; display: flex; gap: var(--gap); overflow-x: auto; scroll-snap-type: x mandatory;
                      padding: .75rem .75rem 1.5rem; scroll-padding-inline: .75rem; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
@@ -158,7 +180,7 @@
         @media (prefers-reduced-motion: reduce) {
             html { scroll-behavior: auto !important; }
             .carrossel { scroll-behavior: auto; }
-            .entrada, .balancar, .bolha, .rota-pontilhada, .anel-pontilhado, .fundo-objetos .objeto, .hero-faixas .trilha, .grupo.revelado .item-anim { animation: none !important; }
+            .entrada, .balancar, .bolha, input:checked + .chip-filtro, input:checked + .chip-filtro::after, .rota-pontilhada, .anel-pontilhado, .fundo-objetos .objeto, .hero-faixas .trilha, .grupo.revelado .item-anim { animation: none !important; }
             .js .revelar, .js .grupo:not(.revelado) .item-anim { opacity: 1 !important; transform: none !important; transition: none !important; }
             .modal-duvida, .modal-fundo, .painel-modal { transition: none !important; }
         }
