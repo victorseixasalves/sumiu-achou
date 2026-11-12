@@ -98,8 +98,7 @@
                      this.ate = '';
                      this.$nextTick(() => this.buscar(true));
                  }
-             }"
-             @keydown.window="if ($event.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes($event.target.tagName)) { $event.preventDefault(); $refs.q.focus(); }">
+             }">
 
         <div class="mx-auto w-full max-w-[1240px] px-4 sm:px-6">
 
@@ -148,9 +147,6 @@
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
                     </button>
 
-                    {{-- Dica do atalho --}}
-                    <kbd x-show="!termo" class="mr-1 hidden shrink-0 items-center justify-center rounded-lg border-2 border-[#29166F]/20 px-2.5 py-1 text-xs font-extrabold text-[#29166F]/45 sm:inline-flex" title="Aperte / para buscar">/</kbd>
-
                     <button type="submit"
                             class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#29166F] px-4 text-sm font-bold text-white transition duration-300 hover:bg-[#1F0F5C] active:scale-95 sm:h-12 sm:px-6">
                         <span class="hidden sm:inline">Buscar</span>
@@ -158,7 +154,7 @@
                     </button>
                 </div>
 
-                <p class="mt-3 hidden items-center gap-2 pl-5 text-xs font-medium text-[#29166F]/60 sm:flex">
+                <p class="item-anim mt-3 hidden items-center gap-2 pl-5 text-xs font-medium text-[#29166F]/60 sm:flex" style="--i: 2;">
                     <span class="h-1.5 w-1.5 rounded-full bg-[#00988D]"></span>
                     Os resultados aparecem enquanto você digita ou escolhe os filtros.
                 </p>
@@ -175,7 +171,7 @@
 
                     {{-- ============ FILTROS ============ --}}
                     <aside class="item-anim overflow-hidden rounded-3xl border-2 border-[#29166F] bg-white shadow-[6px_6px_0_#29166F] lg:sticky lg:top-24 lg:block"
-                           :class="filtros ? 'block' : 'hidden'" style="--i: 2;">
+                           :class="filtros ? 'block' : 'hidden'" style="--i: 3;">
 
                         {{-- Cabeçalho --}}
                         <div class="flex items-center justify-between bg-[#29166F] px-5 py-4 text-white">
