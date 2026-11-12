@@ -271,8 +271,10 @@
                 <div class="mt-8 flex flex-wrap items-center justify-center gap-2">
                     <span class="text-xs font-semibold text-[#29166F]/60">Buscas rápidas:</span>
                     @foreach ($categorias as $nomeCategoria)
-                        <button type="button" @click="q = @js($nomeCategoria); $refs.q.focus()"
-                                class="rounded-full border border-[#29166F]/30 bg-white/70 px-4 py-1.5 text-xs font-semibold text-[#29166F] transition duration-200 hover:-translate-y-0.5 hover:border-[#00988D] hover:bg-[#00988D] hover:text-white active:scale-95">
+                        <button type="button" @click="q = (q === @js($nomeCategoria)) ? '' : @js($nomeCategoria); $refs.q.focus()"
+                                :class="q === @js($nomeCategoria) ? 'ativo' : ''" :aria-pressed="q === @js($nomeCategoria)"
+                                class="chip-filtro cursor-pointer">
+                            <svg class="marca" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>
                             {{ $nomeCategoria }}
                         </button>
                     @endforeach

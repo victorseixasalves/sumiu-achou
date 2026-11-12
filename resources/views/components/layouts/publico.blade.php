@@ -135,11 +135,11 @@
         .chip-filtro .marca { position: absolute; left: .42rem; top: 50%; width: .7rem; height: .7rem; margin-top: -.35rem; opacity: 0; transform: scale(.3) rotate(-40deg);
                               transition: opacity .2s ease, transform .35s cubic-bezier(.3, 1.6, .5, 1); }
         .chip-filtro:hover { border-color: #00988D; transform: translateY(-1px); }
-        input:active + .chip-filtro { transform: scale(.93); }
-        input:checked + .chip-filtro { background: #00988D; color: #fff; border-color: #29166F; box-shadow: 0 3px 0 #29166F; transform: translateY(-2px);
+        input:active + .chip-filtro, .chip-filtro:active { transform: scale(.93); }
+        input:checked + .chip-filtro, .chip-filtro.ativo { background: #00988D; color: #fff; border-color: #29166F; box-shadow: 0 3px 0 #29166F; transform: translateY(-2px);
                                        animation: chip-pop .38s cubic-bezier(.3, 1.6, .5, 1); }
-        input:checked + .chip-filtro .marca { opacity: 1; transform: none; }
-        input:checked + .chip-filtro::after { content: ""; position: absolute; inset: -3px; border-radius: inherit; border: 2px solid #00988D; opacity: 0; pointer-events: none;
+        input:checked + .chip-filtro .marca, .chip-filtro.ativo .marca { opacity: 1; transform: none; }
+        input:checked + .chip-filtro::after, .chip-filtro.ativo::after { content: ""; position: absolute; inset: -3px; border-radius: inherit; border: 2px solid #00988D; opacity: 0; pointer-events: none;
                                               animation: chip-onda .55s ease-out; }
         input:focus-visible + .chip-filtro { outline: 2px solid #00988D; outline-offset: 3px; }
         @keyframes chip-pop  { 0% { transform: scale(.88); } 55% { transform: translateY(-3px) scale(1.09); } 100% { transform: translateY(-2px) scale(1); } }
@@ -181,7 +181,7 @@
         @media (prefers-reduced-motion: reduce) {
             html { scroll-behavior: auto !important; }
             .carrossel { scroll-behavior: auto; }
-            .entrada, .balancar, .bolha, input:checked + .chip-filtro, input:checked + .chip-filtro::after, .rota-pontilhada, .anel-pontilhado, .fundo-objetos .objeto, .hero-faixas .trilha, .grupo.revelado .item-anim { animation: none !important; }
+            .entrada, .balancar, .bolha, input:checked + .chip-filtro, input:checked + .chip-filtro::after, .chip-filtro.ativo, .chip-filtro.ativo::after, .rota-pontilhada, .anel-pontilhado, .fundo-objetos .objeto, .hero-faixas .trilha, .grupo.revelado .item-anim { animation: none !important; }
             .js .revelar, .js .grupo:not(.revelado) .item-anim { opacity: 1 !important; transform: none !important; transition: none !important; }
             .modal-duvida, .modal-fundo, .painel-modal { transition: none !important; }
         }
