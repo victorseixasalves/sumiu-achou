@@ -95,4 +95,35 @@ class ItemController extends Controller
             'ate' => $ate,
         ])->withErrors($validador);
     }
+
+    /**
+     * Página de detalhe de um item (RF16).
+     * Só itens disponíveis ou reservados são públicos: devolvidos, em triagem, destinados
+     * e excluídos logicamente respondem 404. Nenhum dado pessoal é exibido (RN04).
+     */
+    public function show(Item $item): View
+    {
+        abort_unless(
+            in_array($item->status, [StatusItem::Disponivel, StatusItem::Reservado], true),
+            404
+        );
+
+        $item->load(['categoria', 'local']);
+
+        // Outros itens da mesma categoria, para quem não achou o seu aqui.
+        $parecidos = Item::query()
+            ->with(['categoria', 'local'])
+            ->where('categoria_id', $item->categoria_id)
+            ->whereKeyNot($item->getKey())
+            ->whereIn('status', [StatusItem::Disponivel->value, StatusItem::Reservado->value])
+            ->orderByDesc('data_achado')
+            ->orderByDesc('id')
+            ->limit(3)
+            ->get();
+
+        return view('itens.show', [
+            'item' => $item,
+            'parecidos' => $parecidos,
+        ]);
+    }
 }
