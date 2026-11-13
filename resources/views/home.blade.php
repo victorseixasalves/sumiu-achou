@@ -84,7 +84,7 @@
 
                 <img src="{{ asset('images/home/estudantes-hero.webp') }}" width="1000" height="511"
                      alt="Dois estudantes conversando, um deles devolvendo um celular ao colega"
-                     class="entrada relative z-10 block w-full max-w-[700px]" style="--atraso: 200ms;">
+                     class="entrada relative z-10 block w-full max-w-[700px]" style="--atraso: 200ms;" fetchpriority="high" decoding="async">
             </div>
         </div>
     </section>
@@ -216,8 +216,12 @@
                  exemplos: ['carteira preta', 'mochila azul', 'chaves', 'garrafa térmica', 'fone de ouvido', 'caderno'],
                  digitar() {
                      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-                     let i = 0, j = 0, apagando = false;
+                     let i = 0, j = 0, apagando = false, visivel = true;
+                     if ('IntersectionObserver' in window) {
+                         new IntersectionObserver((e) => { visivel = e[0].isIntersecting; }).observe(this.$el);
+                     }
                      const passo = () => {
+                         if (document.hidden || !visivel) return setTimeout(passo, 400);
                          const alvo = this.exemplos[i];
                          if (!apagando) {
                              j++;
@@ -527,7 +531,7 @@
                     </div>
 
                     <img src="{{ asset('images/home/estudante-duvidas.webp') }}" width="700" height="884"
-                         alt="Estudante sorrindo, segurando um livro"
+                         alt="Estudante sorrindo, segurando um livro" loading="lazy" decoding="async"
                          class="pointer-events-none absolute bottom-0 left-1/2 h-[112%] max-w-[112%] -translate-x-1/2 object-contain object-bottom">
 
                     {{-- Balão de pergunta flutuando perto da estudante --}}

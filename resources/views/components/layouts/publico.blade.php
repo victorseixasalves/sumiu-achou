@@ -97,28 +97,30 @@
         .js .grupo:not(.revelado) .item-anim { opacity: 0; }
         .grupo.revelado .item-anim { animation: subir .65s cubic-bezier(.2, .7, .2, 1) backwards; animation-delay: calc(var(--i, 0) * 90ms + 120ms); }
 
+        /* Animações que saíram da tela ficam em pausa e retomam de onde pararam (classe .fora, via script no fim da página) */
+        .fora, .fora * { animation-play-state: paused !important; }
+
         /* ---------- Fundo animado ---------- */
-        .fundo-objetos { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+        .fundo-objetos { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; contain: strict; }
         .fundo-objetos .objeto {
             position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s);
-            color: var(--c); opacity: var(--o); will-change: transform;
+            color: var(--c); opacity: var(--o); will-change: transform; contain: layout paint style;
             animation: oscilar var(--d) ease-in-out var(--a) infinite,
                        cores var(--dc) ease-in-out var(--ac) infinite;
         }
 
         /* ---------- Fundo do hero: faixas de palavras deslizando (cobrem tudo, desfoque leve) ---------- */
-        .hero-faixas { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .hero-faixas { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; contain: strict; }
         .hero-faixas .giro {
             position: absolute; left: -15%; right: -15%; top: 50%;
             display: flex; flex-direction: column; gap: .12em;
             font-size: clamp(3.2rem, 7vw, 6rem);
             transform: translateY(-50%) rotate(-6deg);
-            filter: blur(1.6px);
         }
         .hero-faixas .faixa { overflow: hidden; white-space: nowrap; font-weight: 800; line-height: 1; text-transform: uppercase; }
         .hero-faixas .faixa:nth-child(odd)  { color: transparent; -webkit-text-stroke: 1.5px rgba(255, 255, 255, .28); }
         .hero-faixas .faixa:nth-child(even) { color: rgba(255, 255, 255, .08); }
-        .hero-faixas .trilha { display: inline-flex; align-items: center; will-change: transform; animation: deslizar var(--v, 48s) linear infinite; }
+        .hero-faixas .trilha { display: inline-flex; align-items: center; will-change: transform; filter: blur(1.6px); animation: deslizar var(--v, 48s) linear infinite; }
         .hero-faixas .faixa:nth-child(even) .trilha { animation-direction: reverse; }
         .hero-faixas .trilha span { margin-right: .35em; }
         .hero-faixas .trilha i { display: inline-block; width: .28em; height: .28em; border-radius: 50%; background: rgba(255, 255, 255, .2); margin-right: .35em; }
@@ -349,6 +351,15 @@
             }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
 
             alvos.forEach(function (el) { observador.observe(el); });
+
+            // Pausa as animações contínuas que estão fora da tela (menos trabalho para o navegador ao rolar)
+            var pausaveis = document.querySelectorAll('.hero-faixas, .anel-pontilhado, .rota-pontilhada, .bolha, .balancar');
+            var pausador = new IntersectionObserver(function (entradas) {
+                entradas.forEach(function (entrada) {
+                    entrada.target.classList.toggle('fora', !entrada.isIntersecting);
+                });
+            }, { rootMargin: '120px 0px' });
+            pausaveis.forEach(function (el) { pausador.observe(el); });
         });
     </script>
 </body>

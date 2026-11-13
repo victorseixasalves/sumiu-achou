@@ -46,8 +46,8 @@
             75%      { transform: translate3d(calc(var(--dx) * -.8), calc(var(--dy) * .5), 0) rotate(calc(var(--r) - var(--dr) * .6)) scale(var(--sc2)); }
         }
         @keyframes pulsar { 0%, 100% { opacity: var(--o); } 50% { opacity: calc(var(--o) * .45); } }
-        .fundo-acesso { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
-        .fundo-acesso .objeto { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); color: #fff; opacity: var(--o); will-change: transform;
+        .fundo-acesso { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; contain: strict; }
+        .fundo-acesso .objeto { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); color: #fff; opacity: var(--o); will-change: transform; contain: layout paint style;
                                 animation: oscilar var(--d) ease-in-out var(--a) infinite, pulsar var(--dc) ease-in-out var(--ac) infinite; }
         @media (prefers-reduced-motion: reduce) { .cartao-acesso, .flutua, .deriva, .rota, .fundo-acesso .objeto { animation: none !important; } }
     </style>
