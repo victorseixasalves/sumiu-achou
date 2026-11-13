@@ -179,7 +179,7 @@
                     </div>
 
                     <a href="{{ $linkItens }}" class="group inline-flex items-center gap-1.5 text-sm font-bold text-[#00988D] transition hover:text-[#29166F]">
-                        Ver todos<span class="hidden sm:inline">&nbsp;os itens</span>
+                        <span>Ver todos<span class="hidden sm:inline"> os itens</span></span>
                         <svg class="h-4 w-4 transition duration-200 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
                     </a>
                 </div>
