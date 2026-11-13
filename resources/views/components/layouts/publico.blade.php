@@ -110,7 +110,8 @@
         }
 
         /* ---------- Fundo do hero: faixas de palavras deslizando (cobrem tudo, desfoque leve) ---------- */
-        .hero-faixas { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; contain: strict; }
+        .hero-faixas { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; contain: strict; animation: aparecer 1s ease both; }
+        @keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
         .hero-faixas .giro {
             position: absolute; left: -15%; right: -15%; top: 50%;
             display: flex; flex-direction: column; gap: .12em;
@@ -183,7 +184,7 @@
         @media (prefers-reduced-motion: reduce) {
             html { scroll-behavior: auto !important; }
             .carrossel { scroll-behavior: auto; }
-            .entrada, .balancar, .bolha, input:checked + .chip-filtro, input:checked + .chip-filtro::after, .chip-filtro.ativo, .chip-filtro.ativo::after, .rota-pontilhada, .anel-pontilhado, .fundo-objetos .objeto, .hero-faixas .trilha, .grupo.revelado .item-anim { animation: none !important; }
+            .entrada, .balancar, .bolha, input:checked + .chip-filtro, input:checked + .chip-filtro::after, .chip-filtro.ativo, .chip-filtro.ativo::after, .rota-pontilhada, .anel-pontilhado, .fundo-objetos .objeto, .hero-faixas, .hero-faixas .trilha, .grupo.revelado .item-anim { animation: none !important; }
             .js .revelar, .js .grupo:not(.revelado) .item-anim { opacity: 1 !important; transform: none !important; transition: none !important; }
             .modal-duvida, .modal-fundo, .painel-modal { transition: none !important; }
         }

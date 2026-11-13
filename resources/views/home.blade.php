@@ -18,7 +18,7 @@
         $destinoProcurar = $rotas::has('itens.index') ? route('itens.index') : '#busca';
     @endphp
 
-    <section class="entrada relative overflow-hidden bg-[#7B69B8]">
+    <section class="relative overflow-hidden bg-[#7B69B8]">
 
         {{-- Fundo próprio do hero: faixas de palavras deslizando (cobrem a seção toda, levemente desfocadas) --}}
         <div class="hero-faixas" aria-hidden="true">
